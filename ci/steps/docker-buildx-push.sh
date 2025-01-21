@@ -3,13 +3,12 @@ set -euo pipefail
 
 main() {
   cd "$(dirname "$0")/../.."
+  # NOTE@jsjoeio - this script assumes VERSION exists as an
+  # environment variable.
 
-  # ci/lib.sh sets VERSION and provides download_artifact here
-  source ./ci/lib.sh
-
-  # Download the release-packages artifact
-  download_artifact release-packages ./release-packages
-
+  # NOTE@jsjoeio - this script assumes that you've downloaded
+  # the release-packages artifact to ./release-packages before
+  # running this docker buildx step
   docker buildx bake -f ci/release-image/docker-bake.hcl --push
 }
 
