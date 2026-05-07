@@ -6,31 +6,60 @@ on:
       version:
         type: string
         required: true
+  schedule:
+    - cron: "23 * * * *"
 
 jobs:
   update:
     runs-on: ubuntu-latest
     env:
-      VERSION: ${{ inputs.version }}
+      TAG: ${{ inputs.version }}
       GH_TOKEN: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
 
     steps:
+      - name: Fetch latest tag
+        if: env.TAG == ''
+        run: |
+          tag=$(curl -fsSLI -o /dev/null -w "%{url_effective}" https://github.com/microsoft/vscode/releases/latest)
+          tag="${tag#https://github.com/microsoft/vscode/releases/tag/}"
+          echo "TAG=$tag" >> $GITHUB_ENV
+
+      - name: Remove leading v from tag
+        run: |
+          echo "VERSION=${TAG#v}" >> $GITHUB_ENV
+
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
-      - uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6
+      - name: Check current version
+        id: check
+        run: |
+          if [[ $(git -C lib/vscode describe --tags --exact-match) == "$VERSION" ]] ; then
+            echo done=true >> $GITHUB_OUTPUT
+          elif git ls-remote --exit-code --heads origin "update/$VERSION" ; then
+            echo done=true >> $GITHUB_OUTPUT
+          else
+            echo done=false >> $GITHUB_OUTPUT
+          fi
+
+      - uses: awalsh128/cache-apt-pkgs-action@2c09a5e66da6c8016428a2172bd76e5e4f14bb17 # latest
+        if: steps.check.outputs.done == 'false'
         with:
-          node-version-file: .node-version
+          packages: quilt
+          version: 1.0
 
       - run: ./ci/build/update-vscode.sh
+        if: steps.check.outputs.done == 'false'
 
       - name: Open PR
+        if: steps.check.outputs.done == 'false'
         run: |
           git config --global user.name cdrci
           git config --global user.email opensource@coder.com
-          git checkout -b update/${{ env.VERSION }}
+          git checkout -b "update/$VERSION"
           git add .
-          git commit -m "Update VS Code to ${{ env.VERSION }}"
-          git push -u origin $(git branch --show)
-          gh pr create --repo coder/code-server-aur \
-            --title "Update VS Code to ${{ env.VERSION }}" \
+          git commit -m "Update VS Code to $VERSION"
+          git push -u origin "$(git branch --show)"
+          gh pr create \
+            --repo coder/code-server \
+            --title "Update VS Code to $VERSION" \
             --body-file .cache/checklist \
             --draft

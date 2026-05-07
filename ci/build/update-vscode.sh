@@ -42,7 +42,7 @@ function refresh_patches() {
 function update_node() {
   local node_version
   node_version=$(cat .node-version)
-  if [[ $node_version == $target_node_version ]] ; then
+  if [[ $node_version == "$target_node_version" ]] ; then
     echo "$node_version already matches $target_node_version"
   else
     echo "Updating from $node_version to $target_node_version..."
@@ -52,11 +52,11 @@ function update_node() {
 
 function get-webview-script-hash() {
   local html
-  html=$(<$1)
+  html=$(<"$1")
   local start_tag='<script async type="module">'
   local end_tag="</script>"
-  html=${html##*$start_tag}
-  html=${html%%$end_tag*}
+  html=${html##*"$start_tag"}
+  html=${html%%"$end_tag"*}
   echo -n "$html" | openssl sha256 -binary | openssl base64
 }
 
