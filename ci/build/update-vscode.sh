@@ -17,10 +17,10 @@ function remove_patches() {
 
 function update_vscode() {
   pushd lib/vscode
-  if ! git checkout "$VERSION" ; then
-    echo "$VERSION does not exist locally, fetching..."
+  if ! git checkout "$target_vscode_version" ; then
+    echo "$target_vscode_version does not exist locally, fetching..."
     git fetch --all --prune
-    git checkout "$VERSION"
+    git checkout "$target_vscode_version"
   fi
   popd
 }
@@ -110,12 +110,12 @@ function run() {
 
 function add_changelog() {
   local file=CHANGELOG.md
-  if grep "Code $VERSION" "$file" ; then
-    echo "Changelog for $VERSION already exists"
+  if grep "Code $target_vscode_version" "$file" ; then
+    echo "Changelog for $target_vscode_version already exists"
   else
     # TODO: This is not exactly robust.  In particular, it needs to handle if
     # there is already a "changed" section.
-    sed -i.bak "s/## Unreleased/## Unreleased\n\nCode v$VERSION\n\n### Changed\n\n- Update to Code $VERSION/" "$file"
+    sed -i.bak "s/## Unreleased/## Unreleased\n\nCode v$target_vscode_version\n\n### Changed\n\n- Update to Code $target_vscode_version/" "$file"
   fi
 }
 
@@ -127,6 +127,9 @@ function main() {
   local target_node_version
   target_node_version=$(grep target lib/vscode/remote/.npmrc | awk -F= '{print $2}' | tr -d '"')
 
+  local target_vscode_version
+  target_vscode_version="${VERSION#v}"
+
   declare -a steps
   # Removing patches only needs to be done locally; in CI we start from a fresh
   # clone each time.
@@ -135,7 +138,7 @@ function main() {
   fi
 
   steps+=(
-    "Update VS Code to $VERSION" "update_vscode"
+    "Update VS Code to $target_vscode_version" "update_vscode"
     "Refresh VS Code patches" "refresh_patches"
     "Set Node version to $target_node_version" "update_node"
     "Update CSP webview hash" "update_csp"
