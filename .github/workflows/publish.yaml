@@ -70,11 +70,12 @@ jobs:
           token: ${{ secrets.HOMEBREW_GITHUB_API_TOKEN }}
           ref: "master"
 
-      - name: Merge in master
+      - name: Fetch and reset master
         run: |
           git remote add upstream https://github.com/coder/code-server-aur.git
           git fetch upstream
-          git merge upstream/master
+          git reset --hard upstream/master
+          git push --force
 
       - name: Configure git
         run: |
